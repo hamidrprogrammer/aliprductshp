@@ -1,40 +1,10 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutContext } from '..';
+import { LayoutContext } from '..'; // Assuming LayoutContext is in parent index
+import axios from 'axios'; // For API calls
 
-// Mock data for featured products (جایگزین با داده‌های واقعی از API)
-const mockProducts = [
-  {
-    _id: '1',
-    pName: 'مبل راحتی مدرن آوانگارد',
-    pPrice: 12500000,
-    pImages: ['https://images.unsplash.com/photo-1540574163024-58c7cdd427a2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=870&q=80'],
-    pDescription: 'ترکیبی از هنر و راحتی، مناسب برای فضاهای مدرن و مینیمال.',
-  },
-  {
-    _id: '2',
-    pName: 'صندلی ناهارخوری لوکس ونیز',
-    pPrice: 3800000,
-    pImages: ['https://images.unsplash.com/photo-1592078615290-033ee585e965?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=764&q=80'],
-    pDescription: 'طراحی ایتالیایی با بهترین متریال، برای تجربه‌ای بی‌نظیر از صرف غذا.',
-  },
-  {
-    _id: '3',
-    pName: 'میز جلو مبلی شیشه‌ای کلاسیک',
-    pPrice: 5200000,
-    pImages: ['https://images.unsplash.com/photo-1611269154421-4e27233ac5c7?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=870&q=80'],
-    pDescription: 'شفافیت و زیبایی در کنار هم، مناسب برای دکوراسیون‌های لوکس.',
-  },
-  {
-    _id: '4',
-    pName: 'کاناپه تخت‌خواب‌شو هوشمند',
-    pPrice: 18900000,
-    pImages: ['https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=870&q=80'],
-    pDescription: 'راحتی در روز، آسایش در شب. بهترین انتخاب برای فضاهای کوچک.',
-  },
-];
+const apiURL = import.meta.env.VITE_REACT_APP_API_URL || import.meta.env.REACT_APP_API_URL;
 
-const apiURL = import.meta.env.REACT_APP_API_URL;
 
 const ProductCard = ({ product }) => {
   const { data } = useContext(LayoutContext); // برای دسترسی به تم
@@ -49,7 +19,7 @@ const ProductCard = ({ product }) => {
       transition={{ duration: 0.5 }}
     >
       <img
-        src={product.pImages[0]} // Assuming first image is the primary one
+        src={`${apiURL}/uploads/products/${product.pImages[0]}`} // Updated image path
         alt={product.pName}
         className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-110"
       />
@@ -74,8 +44,56 @@ const ProductCard = ({ product }) => {
 };
 
 const FeaturedProductsSlider = () => {
-  // TODO: Fetch actual featured products
-  const products = mockProducts;
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${apiURL}/api/product/featured`);
+        if (response.data && response.data.Products) {
+          setProducts(response.data.Products);
+        } else {
+          setProducts([]);
+        }
+        setError(null);
+      } catch (err) {
+        setError(err.message || "Failed to fetch featured products.");
+        console.error("Fetch featured products error:", err);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedProducts();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-16 md:py-24 text-center">
+        <p className="text-xl text-[var(--color-text)]">Loading featured products...</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-16 md:py-24 text-center">
+        <p className="text-xl text-red-500">Error: {error}</p>
+      </section>
+    );
+  }
+
+  if (products.length === 0) {
+    return (
+      <section className="py-16 md:py-24 text-center">
+        <p className="text-xl text-[var(--color-text)]">No featured products available at the moment.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="py-16 md:py-24 bg-opacity-50 dark:bg-opacity-50 bg-[var(--color-background)] dark:bg-gray-900 transition-colors duration-300">

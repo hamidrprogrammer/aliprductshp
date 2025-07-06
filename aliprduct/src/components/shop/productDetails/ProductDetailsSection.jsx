@@ -15,7 +15,7 @@ import { isWishReq, unWishReq, isWish } from "../home/Mixins";
 import { updateQuantity, addToCart } from "./Mixins";
 import { totalCost } from "../partials/Mixins";
 
-const apiURL = import.meta.env.REACT_APP_API_URL;
+const apiURL = import.meta.env.VITE_REACT_APP_API_URL || import.meta.env.REACT_APP_API_URL;
 
 // Lightbox component for image zoom
 const Lightbox = ({ image, onClose }) => (

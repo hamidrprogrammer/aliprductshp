@@ -42,21 +42,26 @@ class Product {
   }
 
   async postAddProduct(req, res) {
-    let { pName, pDescription, pPrice, pQuantity, pCategory, pOffer, pStatus } =
+    let { pName, pDescription, pPrice, pQuantity, pCategory, pOffer, pStatus, pIsFeatured } =
       req.body;
     let images = req.files;
     // Validation
     if (
-      !pName |
-      !pDescription |
-      !pPrice |
-      !pQuantity |
-      !pCategory |
-      !pOffer |
+      !pName || // Corrected logical OR
+      !pDescription ||
+      !pPrice ||
+      !pQuantity ||
+      !pCategory ||
+      // pOffer can be 0, so check if it's undefined or null if it's truly optional, or ensure it's sent
+    // For now, let's assume pOffer is required as per original logic.
+    // If pOffer can be 0, !pOffer would be true. Check if it's undefined or handle appropriately.
+    // For simplicity, if pOffer is sent as a string, it will be parsed. If missing and required, it fails.
+      (pOffer === undefined || pOffer === null || pOffer === "") ||
       !pStatus
+      // pIsFeatured has a default, so it's not strictly required in the body unless to set it true
     ) {
       Product.deleteImages(images, "file");
-      return res.json({ error: "All filled must be required" });
+      return res.status(400).json({ error: "All fields (pName, pDescription, pPrice, pQuantity, pCategory, pOffer, pStatus) must be required. pIsFeatured defaults to false." });
     }
     // Validate Name and description
     else if (pName.length > 255 || pDescription.length > 3000) {
@@ -79,11 +84,12 @@ class Product {
           pImages: allImages,
           pName,
           pDescription,
-          pPrice,
-          pQuantity,
+          pPrice: parseFloat(pPrice),
+          pQuantity: parseInt(pQuantity, 10),
           pCategory,
-          pOffer,
+          pOffer: parseFloat(pOffer), // Parse pOffer as a number
           pStatus,
+          pIsFeatured: pIsFeatured === 'true' || pIsFeatured === true,
         });
         let save = await newProduct.save();
         if (save) {
@@ -105,22 +111,28 @@ class Product {
       pCategory,
       pOffer,
       pStatus,
+      pIsFeatured, // Add pIsFeatured
       pImages,
     } = req.body;
     let editImages = req.files;
 
     // Validate other fileds
     if (
-      !pId |
-      !pName |
-      !pDescription |
-      !pPrice |
-      !pQuantity |
-      !pCategory |
-      !pOffer |
+      !pId ||
+      !pName ||
+      !pDescription ||
+      !pPrice ||
+      !pQuantity ||
+      !pCategory ||
+      (pOffer === undefined || pOffer === null || pOffer === "") || // Validate pOffer correctly
       !pStatus
+      // pIsFeatured has a default, so it's not strictly required
     ) {
-      return res.json({ error: "All filled must be required" });
+       // If images were uploaded before validation fail, delete them
+      if (editImages && editImages.length > 0) {
+        Product.deleteImages(editImages, "file");
+      }
+      return res.status(400).json({ error: "All fields (pId, pName, pDescription, pPrice, pQuantity, pCategory, pOffer, pStatus) must be required. pIsFeatured defaults to false." });
     }
     // Validate Name and description
     else if (pName.length > 255 || pDescription.length > 3000) {
@@ -136,11 +148,12 @@ class Product {
       let editData = {
         pName,
         pDescription,
-        pPrice,
-        pQuantity,
+        pPrice: parseFloat(pPrice),
+        pQuantity: parseInt(pQuantity, 10),
         pCategory,
-        pOffer,
+        pOffer: parseFloat(pOffer), // Parse pOffer as a number
         pStatus,
+        pIsFeatured: pIsFeatured === 'true' || pIsFeatured === true,
       };
       if (editImages.length == 2) {
         let allEditImages = [];
@@ -274,75 +287,107 @@ class Product {
   }
 
   async postAddReview(req, res) {
-    let { pId, uId, rating, review } = req.body;
-    if (!pId || !rating || !review || !uId) {
-      return res.json({ error: "All filled must be required" });
-    } else {
-      let checkReviewRatingExists = await productModel.findOne({ _id: pId });
-      if (checkReviewRatingExists.pRatingsReviews.length > 0) {
-        checkReviewRatingExists.pRatingsReviews.map((item) => {
-          if (item.user === uId) {
-            return res.json({ error: "Your already reviewd the product" });
-          } else {
-            try {
-              let newRatingReview = productModel.findByIdAndUpdate(pId, {
-                $push: {
-                  pRatingsReviews: {
-                    review: review,
-                    user: uId,
-                    rating: rating,
-                  },
-                },
-              });
-              newRatingReview.exec((err, result) => {
-                if (err) {
-                  console.log(err);
-                }
-                return res.json({ success: "Thanks for your review" });
-              });
-            } catch (err) {
-              return res.json({ error: "Cart product wrong" });
-            }
-          }
-        });
-      } else {
-        try {
-          let newRatingReview = productModel.findByIdAndUpdate(pId, {
-            $push: {
-              pRatingsReviews: { review: review, user: uId, rating: rating },
-            },
-          });
-          newRatingReview.exec((err, result) => {
-            if (err) {
-              console.log(err);
-            }
-            return res.json({ success: "Thanks for your review" });
-          });
-        } catch (err) {
-          return res.json({ error: "Cart product wrong" });
-        }
+    const { pId, rating, review } = req.body;
+    const uId = req.userDetails._id; // Get uId from JWT
+
+    if (!pId || !rating || !review) {
+      return res.json({ error: "Product ID, rating, and review text are required." });
+    }
+
+    try {
+      const product = await productModel.findById(pId);
+      if (!product) {
+        return res.json({ error: "Product not found." });
       }
+
+      // Check if this user has already reviewed this product
+      const existingReview = product.pRatingsReviews.find(
+        (r) => r.user && r.user.toString() === uId.toString()
+      );
+
+      if (existingReview) {
+        return res.json({ error: "You have already reviewed this product." });
+      }
+
+      // Add the new review
+      product.pRatingsReviews.push({
+        review: review,
+        user: uId,
+        rating: rating,
+        // createdAt is defaulted by schema
+      });
+
+      await product.save();
+      // Refetch product to populate user details in reviews for the response (optional, but good for consistency)
+      const updatedProduct = await productModel.findById(pId).populate("pRatingsReviews.user", "name email");
+      return res.json({ success: "Thanks for your review", product: updatedProduct });
+
+    } catch (err) {
+      console.error("Error adding review:", err);
+      return res.status(500).json({ error: "Failed to add review." });
     }
   }
 
   async deleteReview(req, res) {
-    let { rId, pId } = req.body;
-    if (!rId) {
-      return res.json({ message: "All filled must be required" });
-    } else {
-      try {
-        let reviewDelete = productModel.findByIdAndUpdate(pId, {
-          $pull: { pRatingsReviews: { _id: rId } },
-        });
-        reviewDelete.exec((err, result) => {
-          if (err) {
-            console.log(err);
-          }
-          return res.json({ success: "Your review is deleted" });
-        });
-      } catch (err) {
-        console.log(err);
+    const { rId, pId } = req.body; // reviewId and productId
+    const loggedInUserId = req.userDetails._id;
+    const loggedInUserRole = req.userDetails.role; // Assuming role is part of userDetails
+
+    if (!rId || !pId) {
+      return res.status(400).json({ error: "Review ID and Product ID are required." });
+    }
+
+    try {
+      const product = await productModel.findById(pId);
+      if (!product) {
+        return res.status(404).json({ error: "Product not found." });
       }
+
+      const reviewIndex = product.pRatingsReviews.findIndex(
+        (r) => r._id.toString() === rId.toString()
+      );
+
+      if (reviewIndex === -1) {
+        return res.status(404).json({ error: "Review not found." });
+      }
+
+      const reviewToDelete = product.pRatingsReviews[reviewIndex];
+
+      // Check if the logged-in user is the author of the review OR if the user is an admin
+      if (
+        (reviewToDelete.user && reviewToDelete.user.toString() === loggedInUserId.toString()) ||
+        loggedInUserRole === 1 // Assuming role 1 is Admin
+      ) {
+        product.pRatingsReviews.splice(reviewIndex, 1);
+        await product.save();
+        // Optionally, refetch product to send updated reviews back
+        const updatedProduct = await productModel.findById(pId).populate("pRatingsReviews.user", "name email");
+        return res.json({ success: "Review deleted successfully.", product: updatedProduct });
+      } else {
+        return res.status(403).json({ error: "You are not authorized to delete this review." });
+      }
+    } catch (err) {
+      console.error("Error deleting review:", err);
+      return res.status(500).json({ error: "Failed to delete review." });
+    }
+  }
+
+  async getFeaturedProducts(req, res) {
+    try {
+      let featuredProducts = await productModel
+        .find({ pIsFeatured: true, pStatus: "Active" })
+        .populate("pCategory", "_id cName")
+        .sort({ _id: -1 }) // Or sort by some other criteria like pSold
+        .limit(10); // Limit the number of featured products
+
+      if (featuredProducts) {
+        return res.json({ Products: featuredProducts });
+      } else {
+        return res.json({ Products: [] });
+      }
+    } catch (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Failed to fetch featured products" });
     }
   }
 }

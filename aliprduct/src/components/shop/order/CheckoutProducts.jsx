@@ -6,7 +6,7 @@ import { isAuthenticate } from "../auth/fetchApi";
 import { subTotal, totalCost, quantity, updateQuantityInCart } from "../partials/Mixins"; // Added quantity
 import { LayoutContext } from "..";
 
-const apiURL = import.meta.env.REACT_APP_API_URL;
+const apiURL = import.meta.env.VITE_REACT_APP_API_URL || import.meta.env.REACT_APP_API_URL;
 
 // Mock city list -  در یک برنامه واقعی این لیست از API دریافت می‌شود یا یک لیست جامع‌تر خواهد بود
 const cities = ["تهران", "مشهد", "اصفهان", "شیراز", "تبریز", "کرج", "اهواز", "قم", "کرمانشاه", "ارومیه", "رشت", "زاهدان", "همدان", "کرمان", "یزد", "اردبیل", "بندرعباس", "اراک", "اسلام‌شهر", "زنجان", "سنندج", "قزوین", "خرم‌آباد", "گرگان", "ساری"];

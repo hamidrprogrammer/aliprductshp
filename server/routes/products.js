@@ -2,6 +2,9 @@ const express = require("express");
 const router = express.Router();
 const productController = require("../controller/products");
 const multer = require("multer");
+const { loginCheck, isAdmin } = require("../middleware/auth");
+
+router.get("/featured", productController.getFeaturedProducts); // New route for featured products
 
 var storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -20,12 +23,13 @@ router.post("/product-by-price", productController.getProductByPrice);
 router.post("/wish-product", productController.getWishProduct);
 router.post("/cart-product", productController.getCartProduct);
 
-router.post("/add-product", upload.any(), productController.postAddProduct);
-router.post("/edit-product", upload.any(), productController.postEditProduct);
-router.post("/delete-product", productController.getDeleteProduct);
-router.post("/single-product", productController.getSingleProduct);
+router.post("/add-product", loginCheck, isAdmin, upload.any(), productController.postAddProduct);
+router.post("/edit-product", loginCheck, isAdmin, upload.any(), productController.postEditProduct);
+router.post("/delete-product", loginCheck, isAdmin, productController.getDeleteProduct);
+router.post("/single-product", productController.getSingleProduct); // Publicly accessible
 
-router.post("/add-review", productController.postAddReview);
-router.post("/delete-review", productController.deleteReview);
+// Users can add reviews if logged in. Admins can delete any review, users can delete their own.
+router.post("/add-review", loginCheck, productController.postAddReview);
+router.post("/delete-review", loginCheck, productController.deleteReview); // Auth check further in controller
 
 module.exports = router;

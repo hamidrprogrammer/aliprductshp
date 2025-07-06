@@ -23,7 +23,7 @@ router.post(
   upload.single("cImage"),
   categoryController.postAddCategory
 );
-router.post("/edit-category", loginCheck, categoryController.postEditCategory);
+router.post("/edit-category", loginCheck, upload.single("cImage"), categoryController.postEditCategory); // Added image upload
 router.post(
   "/delete-category",
   loginCheck,

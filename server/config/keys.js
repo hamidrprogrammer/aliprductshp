@@ -1,3 +1,5 @@
+// JWT_SECRET should now be defined in the .env file
+// For example: JWT_SECRET=YourStrongRandomSecretKeyHere
 module.exports = {
-  JWT_SECRET: "SecretKey",
+  // Other keys could be exported here if needed
 };

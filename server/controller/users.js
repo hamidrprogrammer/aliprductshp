@@ -18,114 +18,96 @@ class User {
   }
 
   async getSingleUser(req, res) {
-    let { uId } = req.body;
-    if (!uId) {
-      return res.json({ error: "All filled must be required" });
-    } else {
-      try {
-        let User = await userModel
-          .findById(uId)
-          .select("name email phoneNumber userImage updatedAt createdAt");
-        if (User) {
-          return res.json({ User });
-        }
-      } catch (err) {
-        console.log(err);
+    const uIdFromToken = req.userDetails._id; // Use ID from JWT
+    // const { uId: uIdFromBody } = req.body; // If frontend still sends it
+
+    // Optional: Validate if uIdFromBody is provided and matches token.
+    // if (uIdFromBody && uIdFromBody !== uIdFromToken.toString()) {
+    //   return res.status(403).json({ error: "Forbidden to access another user's data." });
+    // }
+
+    if (!uIdFromToken) {
+      return res.status(400).json({ error: "User ID not found in token." });
+    }
+
+    try {
+      let User = await userModel
+        .findById(uIdFromToken)
+        .select("name email phoneNumber userImage updatedAt createdAt");
+      if (User) {
+        return res.json({ User });
+      } else {
+        return res.status(404).json({ error: "User not found." });
       }
+    } catch (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Server error while fetching user." });
     }
   }
 
-  async postAddUser(req, res) {
-    let { allProduct, user, amount, transactionId, address, phone } = req.body;
-    if (
-      !allProduct ||
-      !user ||
-      !amount ||
-      !transactionId ||
-      !address ||
-      !phone
-    ) {
-      return res.json({ message: "All filled must be required" });
-    } else {
-      try {
-        let newUser = new userModel({
-          allProduct,
-          user,
-          amount,
-          transactionId,
-          address,
-          phone,
-        });
-        let save = await newUser.save();
-        if (save) {
-          return res.json({ success: "User created successfully" });
-        }
-      } catch (err) {
-        return res.json({ error: error });
-      }
-    }
-  }
+  // Removed postAddUser method - it was misplaced order creation logic
+  // async postAddUser(req, res) { ... }
 
   async postEditUser(req, res) {
-    let { uId, name, phoneNumber } = req.body;
-    if (!uId || !name || !phoneNumber) {
-      return res.json({ message: "All filled must be required" });
-    } else {
-      let currentUser = userModel.findByIdAndUpdate(uId, {
-        name: name,
-        phoneNumber: phoneNumber,
-        updatedAt: Date.now(),
-      });
-      currentUser.exec((err, result) => {
-        if (err) console.log(err);
-        return res.json({ success: "User updated successfully" });
-      });
+    const uIdFromToken = req.userDetails._id;
+    const { name, phoneNumber } = req.body; // uId from body is no longer needed for identifying user
+
+    if (!name || !phoneNumber) { // uId is from token now
+      return res.status(400).json({ error: "Name and phone number are required." });
+    }
+
+    try {
+      const updatedUser = await userModel.findByIdAndUpdate(
+        uIdFromToken,
+        {
+          name: name,
+          phoneNumber: phoneNumber,
+          // updatedAt is handled by timestamps: true in schema
+        },
+        { new: true } // Return the updated document
+      ).select("name email phoneNumber userImage updatedAt createdAt");
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found for update." });
+      }
+      return res.json({ success: "User updated successfully", user: updatedUser });
+    } catch (err) {
+      console.error("Error updating user:", err);
+      return res.status(500).json({ error: "Server error while updating user." });
     }
   }
 
-  async getDeleteUser(req, res) {
-    let { oId, status } = req.body;
-    if (!oId || !status) {
-      return res.json({ message: "All filled must be required" });
-    } else {
-      let currentUser = userModel.findByIdAndUpdate(oId, {
-        status: status,
-        updatedAt: Date.now(),
-      });
-      currentUser.exec((err, result) => {
-        if (err) console.log(err);
-        return res.json({ success: "User updated successfully" });
-      });
-    }
-  }
+  // Removed getDeleteUser method - it was misplaced order status update logic
+  // async getDeleteUser(req, res) { ... }
 
   async changePassword(req, res) {
-    let { uId, oldPassword, newPassword } = req.body;
-    if (!uId || !oldPassword || !newPassword) {
-      return res.json({ message: "All filled must be required" });
-    } else {
-      const data = await userModel.findOne({ _id: uId });
-      if (!data) {
-        return res.json({
-          error: "Invalid user",
-        });
-      } else {
-        const oldPassCheck = await bcrypt.compare(oldPassword, data.password);
-        if (oldPassCheck) {
-          newPassword = bcrypt.hashSync(newPassword, 10);
-          let passChange = userModel.findByIdAndUpdate(uId, {
-            password: newPassword,
-          });
-          passChange.exec((err, result) => {
-            if (err) console.log(err);
-            return res.json({ success: "Password updated successfully" });
-          });
-        } else {
-          return res.json({
-            error: "Your old password is wrong!!",
-          });
-        }
+    const uIdFromToken = req.userDetails._id;
+    const { oldPassword, newPassword } = req.body; // uId from body is no longer needed
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: "Old password and new password are required." });
+    }
+
+    try {
+      const user = await userModel.findById(uIdFromToken);
+      if (!user) {
+        // This should ideally not happen if loginCheck is effective
+        return res.status(404).json({ error: "User not found." });
       }
+
+      const isMatch = await bcrypt.compare(oldPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ error: "Incorrect old password." });
+      }
+
+      const hashedPassword = bcrypt.hashSync(newPassword, 10);
+      await userModel.findByIdAndUpdate(uIdFromToken, { password: hashedPassword });
+
+      return res.json({ success: "Password updated successfully." });
+
+    } catch (err) {
+      console.error("Error changing password:", err);
+      return res.status(500).json({ error: "Server error while changing password." });
     }
   }
 }

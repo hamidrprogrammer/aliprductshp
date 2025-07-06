@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema(
       default: "user.png",
     },
     verified: {
-      type: String,
+      type: Boolean, // Changed from String to Boolean
       default: false,
     },
     secretKey: {

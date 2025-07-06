@@ -2,7 +2,7 @@ import React, { Fragment, useContext, useEffect } from "react";
 import { DashboardContext } from "./";
 import { uploadImage, sliderImages, deleteImage } from "./Action";
 
-const apiURL = import.meta.env.REACT_APP_API_URL;
+const apiURL = import.meta.env.VITE_REACT_APP_API_URL || import.meta.env.REACT_APP_API_URL;
 
 const Customize = () => {
   const { data, dispatch } = useContext(DashboardContext);

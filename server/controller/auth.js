@@ -2,7 +2,7 @@ const { toTitleCase, validateEmail } = require("../config/function");
 const bcrypt = require("bcryptjs");
 const userModel = require("../models/users");
 const jwt = require("jsonwebtoken");
-const { JWT_SECRET } = require("../config/keys");
+// const { JWT_SECRET } = require("../config/keys"); // No longer needed from here
 
 class Auth {
   async isAdmin(req, res) {
@@ -71,7 +71,7 @@ class Auth {
                 email,
                 password,
                 // ========= Here role 1 for admin signup role 0 for customer signup =========
-                userRole: 1, // Field Name change to userRole from role
+                userRole: 0, // Default role for new signups is customer
               });
               newUser
                 .save()
@@ -124,9 +124,16 @@ console.log(login);
         if (login) {
           const token = jwt.sign(
             { _id: data._id, role: data.userRole },
-            JWT_SECRET
+            process.env.JWT_SECRET // Use process.env here
           );
-          const encode = jwt.verify(token, JWT_SECRET);
+          // Verifying here before sending is redundant if signing worked.
+          // The client/middleware will verify it upon next request.
+          // const encode = jwt.verify(token, process.env.JWT_SECRET);
+          return res.json({
+            token: token,
+            user: { _id: data._id, role: data.userRole, name: data.name, email: data.email }, // Send back some user info
+          });
+        } else {
           return res.json({
             token: token,
             user: encode,

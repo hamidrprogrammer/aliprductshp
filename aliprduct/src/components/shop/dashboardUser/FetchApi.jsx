@@ -1,9 +1,13 @@
 import axios from "axios";
-const apiURL = import.meta.env.REACT_APP_API_URL;
+const apiURL = import.meta.env.VITE_REACT_APP_API_URL || import.meta.env.REACT_APP_API_URL;
 
 export const getUserById = async (uId) => {
   try {
-    let res = await axios.post(`${apiURL}/api/user/signle-user`, { uId });
+    // The backend route expects uId in the body, but for fetching self-data,
+    // it's better if the backend uses the JWT.
+    // However, the current frontend action `fetchData` in Action.jsx passes userId.
+    // For now, just fixing the typo. Backend logic will be adjusted later.
+    let res = await axios.post(`${apiURL}/api/user/single-user`, { uId }); // Fixed typo
     return res.data;
   } catch (error) {
     console.log(error);

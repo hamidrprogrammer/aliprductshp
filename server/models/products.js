@@ -32,8 +32,8 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
     pOffer: {
-      type: String,
-      default: null,
+      type: Number, // Changed from String to Number
+      default: 0, // Default to 0 if it's a numerical discount/percentage
     },
     pRatingsReviews: [
       {
@@ -49,6 +49,10 @@ const productSchema = new mongoose.Schema(
     pStatus: {
       type: String,
       required: true,
+    },
+    pIsFeatured: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }

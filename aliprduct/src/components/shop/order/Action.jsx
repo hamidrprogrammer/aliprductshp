@@ -34,63 +34,91 @@ export const pay = async (
   data,
   dispatch,
   state,
-  setState,
-  getPaymentProcess,
-  totalCost,
-  history
+  setState, // To set errors or update clientToken/instance if needed
+  getPaymentProcess, // Function to call Braintree payment processing
+  totalCost // Function to calculate total cost
+  // history/navigate is removed, will be handled by the calling component
 ) => {
-  console.log(state);
-  if (!state.address) {
-    setState({ ...state, error: "Please provide your address" });
-  } else if (!state.phone) {
-    setState({ ...state, error: "Please provide your phone number" });
-  } else {
-    let nonce;
+  return new Promise((resolve, reject) => {
+    if (!state.address) {
+      setState({ ...state, error: "Please provide your address" });
+      reject("Address is required.");
+      return;
+    }
+    if (!state.phone) {
+      setState({ ...state, error: "Please provide your phone number" });
+      reject("Phone number is required.");
+      return;
+    }
+
+    // Braintree instance is expected to be in state.instance by the calling component
+    if (!state.instance || typeof state.instance.requestPaymentMethod !== 'function') {
+      setState({ ...state, error: "Payment gateway not initialized."});
+      reject("Payment gateway not initialized.");
+      return;
+    }
+
     state.instance
       .requestPaymentMethod()
       .then((data) => {
         dispatch({ type: "loading", payload: true });
-        nonce = data.nonce;
-        let paymentData = {
+        const nonce = data.nonce;
+        const paymentData = {
           amountTotal: totalCost(),
           paymentMethod: nonce,
         };
+
         getPaymentProcess(paymentData)
-          .then(async (res) => {
-            if (res) {
-              let orderData = {
+          .then(async (paymentResult) => {
+            if (paymentResult && paymentResult.success && paymentResult.transaction) { // Assuming success structure
+              const orderData = {
                 allProduct: JSON.parse(localStorage.getItem("cart")),
-                user: JSON.parse(localStorage.getItem("jwt")).user._id,
-                amount: res.transaction.amount,
-                transactionId: res.transaction.id,
+                // user ID is now added by backend using JWT from createOrder call
+                amount: paymentResult.transaction.amount,
+                transactionId: paymentResult.transaction.id,
                 address: state.address,
                 phone: state.phone,
               };
+
               try {
-                let resposeData = await createOrder(orderData);
-                if (resposeData.success) {
+                const orderResponse = await createOrder(orderData);
+                if (orderResponse && orderResponse.success) {
                   localStorage.setItem("cart", JSON.stringify([]));
                   dispatch({ type: "cartProduct", payload: null });
                   dispatch({ type: "cartTotalCost", payload: null });
-                  dispatch({ type: "orderSuccess", payload: true });
-                  setState({ clientToken: "", instance: {} });
+                  dispatch({ type: "orderSuccess", payload: true }); // For success message display
+                  setState(prevState => ({ ...prevState, clientToken: "", instance: {} })); // Reset Braintree state
                   dispatch({ type: "loading", payload: false });
-                  return navigate("/");
-                } else if (resposeData.error) {
-                  console.log(resposeData.error);
+                  resolve(orderResponse);
+                } else {
+                  dispatch({ type: "loading", payload: false });
+                  setState({ ...state, error: orderResponse.error || "Order creation failed."});
+                  reject(orderResponse.error || "Order creation failed.");
                 }
               } catch (error) {
-                console.log(error);
+                dispatch({ type: "loading", payload: false });
+                console.error("Create order error:", error);
+                setState({ ...state, error: "Order creation failed due to a network or server error."});
+                reject("Order creation failed due to a network or server error.");
               }
+            } else {
+              dispatch({ type: "loading", payload: false });
+              setState({ ...state, error: paymentResult.error || "Payment processing failed."});
+              reject(paymentResult.error || "Payment processing failed.");
             }
           })
-          .catch((err) => {
-            console.log(err);
+          .catch((paymentProcessError) => {
+            dispatch({ type: "loading", payload: false });
+            console.error("Braintree payment process error:", paymentProcessError);
+            setState({ ...state, error: "Payment processing failed."});
+            reject("Payment processing failed.");
           });
       })
-      .catch((error) => {
-        console.log(error);
-        setState({ ...state, error: error.message });
+      .catch((requestPaymentMethodError) => {
+        dispatch({ type: "loading", payload: false }); // Ensure loading is stopped
+        console.error("Braintree request payment method error:", requestPaymentMethodError);
+        setState({ ...state, error: requestPaymentMethodError.message || "Failed to request payment method." });
+        reject(requestPaymentMethodError.message || "Failed to request payment method.");
       });
-  }
+  });
 };
