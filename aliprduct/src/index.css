@@ -1,0 +1,99 @@
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-background: #f3f4f6; /* bg-gray-100 */
+  --color-text: #1f2937; /* text-gray-800 */
+  --color-accent: #3b82f6; /* blue-500 for example */
+  --color-card-background: #ffffff;
+  --color-card-text: var(--color-text);
+  --neumorphism-shadow-light: -5px -5px 10px #ffffff, 5px 5px 10px #d1d9e6;
+  --neumorphism-shadow-dark-inset: inset -5px -5px 10px rgba(0,0,0,0.2), inset 5px 5px 10px rgba(255,255,255,0.1);
+}
+
+.dark {
+  --color-background: #111827; /* bg-gray-900 */
+  --color-text: #d1d9e6; /* text-gray-300 */
+  --color-accent: #60a5fa; /* blue-400 for example */
+  --color-card-background: #1f2937; /* bg-gray-800 */
+  --color-card-text: var(--color-text);
+  --neumorphism-shadow-dark: -5px -5px 10px #2a3a50, 5px 5px 10px #0c101a;
+  --neumorphism-shadow-light-inset: inset -5px -5px 10px rgba(255,255,255,0.05), inset 5px 5px 10px rgba(0,0,0,0.3);
+}
+
+body {
+  margin: 0;
+  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Neubrutalism base styles */
+.neubrutal-border {
+  border: 2px solid var(--color-text);
+}
+
+.neubrutal-shadow {
+  box-shadow: 4px 4px 0px var(--color-text);
+}
+
+/* Neumorphism base styles for light theme */
+.neumorphism-light {
+  background: var(--color-card-background);
+  box-shadow: var(--neumorphism-shadow-light);
+  border-radius: 12px; /* تیزتر از نئومورفیسم کلاسیک */
+}
+.neumorphism-light-inset {
+  background: var(--color-card-background);
+  box-shadow: var(--neumorphism-shadow-dark-inset); /* Inset for dark text on light bg */
+  border-radius: 12px;
+}
+
+
+/* Neumorphism base styles for dark theme */
+.dark .neumorphism-dark {
+  background: var(--color-card-background);
+  box-shadow: var(--neumorphism-shadow-dark);
+  border-radius: 12px;
+}
+.dark .neumorphism-dark-inset {
+  background: var(--color-card-background);
+  box-shadow: var(--neumorphism-shadow-light-inset); /* Inset for light text on dark bg */
+  border-radius: 12px;
+}
+
+
+/* Liquid Glass effect (can be combined with Neumorphism) */
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.1); /* Adjust alpha for intensity */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.dark .liquid-glass {
+  background: rgba(31, 41, 55, 0.2); /* bg-gray-800 with alpha */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+  background-color: rgba(128, 128, 128, 0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
