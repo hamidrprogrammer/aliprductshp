@@ -1,71 +1,90 @@
 import React, { Fragment, useState, useEffect, useContext } from "react";
 import { useNavigate } from 'react-router-dom';
 import { getAllCategory } from "../../admin/categories/FetchApi";
-import { HomeContext } from "./index"; // برای دسترسی به dispatch در صورت نیاز به loading state
+import { HomeContext } from "./index";
 
 const apiURL = import.meta.env.REACT_APP_API_URL;
 
 const CategoryCards = () => {
   const navigate = useNavigate();
-  const { dispatch } = useContext(HomeContext); // برای مدیریت loading
+  const { data: homeData, dispatch: homeDispatch } = useContext(HomeContext);
   const [categories, setCategories] = useState(null);
+  const [loading, setLoading] = useState(true); // Local loading state
 
   useEffect(() => {
     const fetchData = async () => {
-      dispatch({ type: "loading", payload: true });
+      setLoading(true);
+      // homeDispatch({ type: "loading", payload: true }); // Redundant if local loading is used
       try {
         let responseData = await getAllCategory();
         if (responseData && responseData.Categories) {
           setCategories(responseData.Categories);
         }
-        dispatch({ type: "loading", payload: false });
       } catch (error) {
         console.log(error);
-        dispatch({ type: "loading", payload: false });
+        // Consider setting an error state here to show to the user
+      } finally {
+        setLoading(false);
+        // homeDispatch({ type: "loading", payload: false });
       }
     };
     fetchData();
-  }, [dispatch]);
+  }, [/*homeDispatch*/]); // homeDispatch removed if not used for global loading
 
-  if (!categories) {
+  if (loading) {
     return (
-      <div className="my-16 text-center text-xl">
+      <div className="my-16 text-center text-xl text-[var(--color-text-secondary)]">
         در حال بارگذاری دسته‌بندی‌ها...
       </div>
     );
   }
 
-  if (categories.length === 0) {
-    return <div className="my-16 text-center text-xl">دسته‌بندی یافت نشد.</div>;
+  if (!categories || categories.length === 0) {
+    return <div className="my-16 text-center text-xl text-[var(--color-text-secondary)]">دسته‌بندی یافت نشد.</div>;
   }
 
   return (
-    <section className="py-16 md:py-24 bg-[var(--color-background)] dark:bg-gray-900 transition-colors duration-300">
-      <div className="container mx-auto px-6 md:px-12">
-        <h2 className="text-3xl md:text-5xl font-bold text-center mb-12 md:mb-16 text-[var(--color-text)]">
+    <section className="py-12 md:py-20 bg-[var(--color-background)] dark:bg-gray-900 transition-colors duration-300">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 md:mb-16 text-[var(--color-text-primary)]">
           کاوش در دسته‌بندی‌های ما
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
-          {categories.map((item, index) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          {categories.map((item) => (
             <div
-              key={index}
+              key={item._id}
               onClick={() => navigate(`/products/category/${item._id}`)}
-              className="group relative overflow-hidden rounded-xl shadow-lg cursor-pointer transform transition-all duration-300 hover:scale-105 neumorphism-light dark:neumorphism-dark"
-              // برای افکت tilt در آینده می‌توان از کتابخانه استفاده کرد
+              className="group relative overflow-hidden rounded-xl shadow-lg cursor-pointer
+                         bg-[var(--color-card-background)] text-[var(--color-card-text)]
+                         transition-all duration-300 ease-in-out hover:shadow-2xl hover:-translate-y-1"
             >
-              <img
-                src={`${apiURL}/uploads/categories/${item.cImage}`}
-                alt={item.cName}
-                className="w-full h-72 object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/50 to-transparent"></div>
-              <div className="absolute bottom-0 left-0 right-0 p-6">
-                <h3 className="text-2xl md:text-3xl font-bold text-white mb-2 group-hover:text-[var(--color-accent)] transition-colors duration-300">
+              <div className="relative w-full h-64 md:h-72"> {/* Fixed height for images */}
+                <img
+                  src={`${apiURL}/uploads/categories/${item.cImage}`}
+                  alt={item.cName}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  // Fallback image if item.cImage is not available
+                  onError={(e) => { e.target.onerror = null; e.target.src="https://via.placeholder.com/400x300/cccccc/969696?text=No+Image"; }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300"></div>
+              </div>
+
+              <div className="p-5 md:p-6 absolute bottom-0 left-0 right-0">
+                <h3 className="text-xl md:text-2xl font-semibold text-white mb-2 truncate group-hover:text-[var(--color-accent)] transition-colors duration-300">
                   {item.cName}
                 </h3>
-                <p className="text-gray-200 dark:text-gray-300 text-sm mb-3 line-clamp-2">{item.cDescription || 'توضیحات این دسته‌بندی به زودی اضافه خواهد شد.'}</p>
-                <button className="text-white font-semibold tracking-wider py-2 px-4 rounded-md bg-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:translate-y-0 translate-y-4">
+                <p className="text-gray-200 text-xs md:text-sm mb-3 line-clamp-2 h-8 md:h-10"> {/* Fixed height for description */}
+                  {item.cDescription || 'توضیحات این دسته‌بندی به زودی اضافه خواهد شد.'}
+                </p>
+                <button
+                  className="mt-2 text-sm font-medium text-[var(--color-accent)] opacity-0 group-hover:opacity-100
+                             transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 ease-out
+                             flex items-center"
+                >
                   مشاهده محصولات
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 transform rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
                 </button>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React, { Fragment, useState, useContext } from "react";
-import Login from "./Login";
+import Login from "./Login"; // Assuming Login and Signup components handle their own internal field styling
 import Signup from "./Signup";
 import { LayoutContext } from "../index";
 
@@ -7,60 +7,50 @@ const LoginSignup = (props) => {
   const { data, dispatch } = useContext(LayoutContext);
 
   const [login, setLogin] = useState(true);
-  const [loginValue, setLoginValue] = useState("Create an account");
+  const [loginValue, setLoginValue] = useState("حساب کاربری ایجاد کنید"); // Translated
 
   const loginSignupModalToggle = () =>
-    data.loginSignupModal
-      ? dispatch({ type: "loginSignupModalToggle", payload: false })
-      : dispatch({ type: "loginSignupModalToggle", payload: true });
+    dispatch({ type: "loginSignupModalToggle", payload: !data.loginSignupModal });
 
   const changeLoginSignup = () => {
     if (login) {
       setLogin(false);
-      setLoginValue("Login");
+      setLoginValue("ورود به حساب کاربری"); // Translated
     } else {
       setLogin(true);
-      setLoginValue("Create an account");
+      setLoginValue("حساب کاربری ایجاد کنید"); // Translated
     }
   };
 
   return (
     <Fragment>
-      {/* Black Overlay  */}
+      {/* Black Overlay */}
       <div
-        onClick={(e) => loginSignupModalToggle()}
-        className={` ${
-          data.loginSignupModal ? "" : "hidden"
-        } fixed top-0 z-40 w-full h-screen bg-black opacity-50 cursor-pointer`}
-      ></div>
+        onClick={loginSignupModalToggle}
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300
+                    ${data.loginSignupModal ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+      />
       {/* Signup Login Component Render */}
       <section
-        className={` ${
-          data.loginSignupModal ? "" : "hidden"
-        } fixed z-40 inset-0 my-8 md:my-20 flex items-start justify-center overflow-auto`}
+        className={`fixed z-50 inset-0 flex items-center justify-center p-4 transition-opacity duration-300
+                    ${data.loginSignupModal ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
       >
-        <div className="w-11/12 md:w-3/5 lg:w-2/4 relative space-y-4 bg-white p-6 md:px-12 md:py-6">
-          {login ? <Login /> : <Signup />}
-          <div className="flex items-center space-x-2">
-            <span className="border-b border-gray-500 w-full" />
-            <span className="font-medium">or</span>
-            <span className="border-b border-gray-500 w-full" />
-          </div>
-          <div
-            onClick={(e) => changeLoginSignup()}
-            style={{ color: "#303031", border: "1px solid #303031" }}
-            className="px-4 py-2 font-medium text-center cursor-pointer"
+        <div
+          className={`relative w-full max-w-md bg-[var(--color-card-background)] text-[var(--color-text-primary)]
+                      rounded-xl shadow-2xl p-6 md:p-8 transform transition-all duration-300 ease-out
+                      ${data.loginSignupModal ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
+        >
+          {/* Modal Close Button */}
+          <button
+            onClick={() => {
+              loginSignupModalToggle();
+              dispatch({ type: "loginSignupError", payload: false });
+            }}
+            className="absolute top-4 right-4 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            aria-label="بستن"
           >
-            {loginValue}
-          </div>
-          {/*  Modal Close Button */}
-          <div className="absolute top-0 right-0 mx-4">
             <svg
-              onClick={(e) => {
-                loginSignupModalToggle();
-                dispatch({ type: "loginSignupError", payload: false });
-              }}
-              className="w-6 h-6 cursor-pointer"
+              className="w-6 h-6"
               fill="currentColor"
               viewBox="0 0 20 20"
               xmlns="http://www.w3.org/2000/svg"
@@ -71,6 +61,25 @@ const LoginSignup = (props) => {
                 clipRule="evenodd"
               />
             </svg>
+          </button>
+
+          <div className="space-y-6">
+            {login ? <Login /> : <Signup />} {/* Assume Login/Signup components will use new form styles */}
+
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <span className="flex-grow border-t border-[var(--color-border)]" />
+              <span className="text-xs text-[var(--color-text-secondary)] uppercase">یا</span>
+              <span className="flex-grow border-t border-[var(--color-border)]" />
+            </div>
+
+            <button
+              onClick={changeLoginSignup}
+              className="w-full py-3 px-4 rounded-lg border-2 border-[var(--color-accent)] text-[var(--color-accent)]
+                         font-semibold hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-150
+                         focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[var(--color-accent)]"
+            >
+              {loginValue}
+            </button>
           </div>
         </div>
       </section>

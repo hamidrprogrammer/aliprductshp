@@ -1,8 +1,9 @@
-import React, { Fragment, useEffect, useState } from "react";
-import {  useParams } from "react-router-dom";
-import Layout, { LayoutContext } from "../layout";
+import React, { Fragment, useEffect, useState, useContext } from "react"; // Added useContext
+import { useParams, useNavigate } from "react-router-dom";
+import Layout, { LayoutContext } from "../layout"; // LayoutContext for theme
 import { productByCategory } from "../../admin/products/FetchApi";
-import { useNavigate } from 'react-router-dom';
+import { isWishReq, unWishReq, isWish } from "./Mixins"; // For wishlist
+import { motion } from 'framer-motion';
 
 const apiURL = import.meta.env.REACT_APP_API_URL;
 
@@ -10,22 +11,81 @@ const Submenu = ({ category }) => {
   const navigate = useNavigate();
   return (
     <Fragment>
-      {/* Submenu Section */}
-      <section className="mx-4 mt-24 md:mx-12 md:mt-32 lg:mt-24">
-        <div className="flex justify-between items-center">
-          <div className="text-sm flex space-x-3">
+      <section className="mx-4 mt-20 md:mx-12 md:mt-24 lg:mt-28 mb-6 md:mb-8">
+        <div className="flex justify-between items-center py-3 border-b border-[var(--color-border)]">
+          <div className="text-sm flex items-center space-x-2 space-x-reverse text-[var(--color-text-secondary)]">
             <span
-              className="hover:text-yellow-700 cursor-pointer"
-              onClick={(e) => navigate("/")}
+              className="hover:text-[var(--color-accent)] cursor-pointer"
+              onClick={() => navigate("/")}
             >
-              Shop
+              فروشگاه
             </span>
-            <span className="text-yellow-700 cursor-default">{category}</span>
+            <svg className="w-3 h-3 transform rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
+            <span className="text-[var(--color-text-primary)] font-medium cursor-default">{category}</span>
           </div>
-          <div>
+        </div>
+      </section>
+    </Fragment>
+  );
+};
+
+// ProductFilters and SortDropdown would be separate components,
+// their internal styling needs to be updated based on template.html in a later step or if specifically requested.
+// For now, we are focusing on the ProductCard and overall page layout.
+// import ProductFilters from "../productListing/ProductFilters";
+// import SortDropdown from "../productListing/SortDropdown";
+
+
+const ProductCard = ({ product, index, wList, setWlist }) => { // Added wList and setWlist
+  const navigate = useNavigate();
+  const { data: layoutData, dispatch: layoutDispatch } = useContext(LayoutContext); // For theme and cart dispatch
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { delay: index * 0.05, duration: 0.4 }
+    }
+  };
+
+  const addToCartHandler = (e) => {
+    e.stopPropagation();
+    layoutDispatch({ type: "addProductToCart", payload: product, quantity: 1 });
+    layoutDispatch({ type: "cartModalToggle", payload: true });
+    console.log('Add to cart from category page:', product.pName);
+  };
+
+  return (
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      className={`relative flex flex-col h-full rounded-xl overflow-hidden
+                  bg-[var(--color-card-background)] text-[var(--color-card-text)]
+                  shadow-lg group transition-all duration-300 ease-in-out hover:shadow-2xl hover:-translate-y-1`}
+      onClick={() => navigate(`/products/${product._id}`)}
+    >
+      <div className="relative w-full h-56 md:h-64 overflow-hidden">
+        <img
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          src={`${apiURL}/uploads/products/${product.pImages[0]}`}
+          alt={product.pName}
+          onError={(e) => { e.target.onerror = null; e.target.src="https://via.placeholder.com/400x300/cccccc/969696?text=No+Image"; }}
+        />
+        <div className="absolute top-2 right-2 z-10">
+           <button
+            onClick={(e) => {
+              e.stopPropagation();
+              isWish(product._id, wList) ? unWishReq(e, product._id, setWlist) : isWishReq(e, product._id, setWlist);
+            }}
+            title={isWish(product._id, wList) ? "Remove from Wishlist" : "Add to Wishlist"}
+            className="p-2 rounded-full bg-white/30 dark:bg-black/30 hover:bg-white/50 dark:hover:bg-black/50 backdrop-blur-sm transition-colors duration-150"
+          >
             <svg
-              className="w-3 h-3"
-              fill="none"
+              className={`w-5 h-5 md:w-6 md:h-6 cursor-pointer transition-all duration-300 ease-in
+                          ${isWish(product._id, wList) ? 'text-red-500 fill-current' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-accent)]'}`}
+              fill={isWish(product._id, wList) ? "currentColor" : "none"}
               stroke="currentColor"
               viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg"
@@ -34,74 +94,27 @@ const Submenu = ({ category }) => {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
               />
             </svg>
-          </div>
-        </div>
-      </section>
-      {/* Submenu Section */}
-    </Fragment>
-  );
-};
-
-import ProductFilters from "../productListing/ProductFilters";
-import SortDropdown from "../productListing/SortDropdown";
-import { motion } from 'framer-motion';
-
-const ProductCard = ({ product, index }) => {
-  const navigate = useNavigate();
-  const { data } = useContext(LayoutContext);
-
-  // ایجاد تأخیر متفاوت برای هر کارت برای انیمیشن staggered
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { delay: index * 0.1, duration: 0.4 }
-    }
-  };
-
-  return (
-    <motion.div
-      variants={cardVariants}
-      initial="hidden"
-      animate="visible"
-      className={`relative col-span-1 m-2 group overflow-hidden rounded-xl shadow-lg cursor-pointer transform transition-all duration-300 hover:-translate-y-2
-                  ${data.isDarkMode ? 'neumorphism-dark liquid-glass' : 'neumorphism-light'}`}
-      onClick={(e) => navigate(`/products/${product._id}`)}
-    >
-      <div className="relative w-full h-72 md:h-80 overflow-hidden">
-        <img
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          src={`${apiURL}/uploads/products/${product.pImages[0]}`}
-          alt={product.pName}
-        />
-        <div className="absolute top-2 right-2 flex flex-col space-y-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <button
-            onClick={(e) => { e.stopPropagation(); /* TODO: Add to wishlist logic */ console.log('Add to wishlist'); }}
-            className={`p-2 rounded-full transition-colors duration-200 ${data.isDarkMode ? 'bg-gray-700 hover:bg-red-500 text-white' : 'bg-white hover:bg-red-500 hover:text-white text-gray-700'}`}
-            title="افزودن به علاقه‌مندی‌ها"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
           </button>
         </div>
       </div>
-      <div className={`p-4 ${data.isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-        <h3 className="text-lg font-bold truncate mb-1 group-hover:text-[var(--color-accent)] transition-colors duration-300" title={product.pName}>
+      <div className={`flex flex-col flex-grow p-4 md:p-5`}>
+        <h3 className="text-lg md:text-xl font-semibold mb-1 truncate h-12 md:h-14 flex items-center" title={product.pName}>
           {product.pName}
         </h3>
-        <p className="text-2xl font-extrabold text-[var(--color-accent)] mb-3">
-          {product.pPrice.toLocaleString('fa-IR')} <span className="text-sm font-normal">تومان</span>
-        </p>
-        <button
-          onClick={(e) => { e.stopPropagation(); /* TODO: Add to cart logic */ console.log('Add to cart'); }}
-          className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300 neubrutal-border text-sm
-                      ${data.isDarkMode ? 'bg-gray-700 hover:bg-[var(--color-accent)] text-white' : 'bg-white hover:bg-[var(--color-accent)] hover:text-white border-[var(--color-text)]'}`}
-        >
-          افزودن به سبد خرید
-        </button>
+        <div className="mt-auto flex justify-between items-center pt-2">
+          <p className="text-xl md:text-2xl font-bold text-[var(--color-accent)]">
+            {product.pPrice.toLocaleString('fa-IR')} <span className="text-xs font-normal">تومان</span>
+          </p>
+          <button
+            onClick={addToCartHandler}
+            className="bg-[var(--color-accent)] text-white text-xs md:text-sm font-medium py-2 px-3 md:px-4 rounded-lg hover:bg-[var(--color-accent-hover)] transition-colors duration-150"
+          >
+            افزودن به سبد
+          </button>
+        </div>
       </div>
     </motion.div>
   );
@@ -109,36 +122,42 @@ const ProductCard = ({ product, index }) => {
 
 
 const AllProduct = ({ products }) => {
-  const navigate = useNavigate();
   const category =
-    products && products.length > 0 ? products[0].pCategory.cName : "";
+    products && products.length > 0 ? products[0].pCategory.cName : "محصولات";
+  const [wList, setWlist] = useState(JSON.parse(localStorage.getItem("wishList")) || []);
 
   return (
     <Fragment>
       <Submenu category={category} />
-      <div className="flex flex-col md:flex-row">
-        <ProductFilters />
-        <main className="flex-1 p-4">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-[var(--color-text)]">محصولات {category}</h2>
-            <SortDropdown />
+      <div className="flex flex-col md:flex-row container mx-auto px-4 sm:px-6 lg:px-8 pb-12 md:pb-16"> {/* Added pb for spacing */}
+        {/* <aside className="w-full md:w-1/4 lg:w-1/5 p-4"> */}
+          {/* ProductFilters would go here - placeholder for now */}
+          {/* <div className="bg-[var(--color-card-background)] p-4 rounded-lg shadow">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3">فیلترها</h3>
+            <p className="text-sm text-[var(--color-text-secondary)]">به زودی...</p>
+          </div> */}
+        {/* </aside> */}
+        <main className="flex-1 p-0 md:px-4"> {/* Adjusted padding */}
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-text-primary)] mb-4 md:mb-0">
+              {category}
+            </h1>
+            {/* SortDropdown would go here - placeholder for now */}
+            {/* <div className="bg-[var(--color-card-background)] p-2 rounded-lg shadow">
+              <p className="text-sm text-[var(--color-text-secondary)]">مرتب‌سازی به زودی...</p>
+            </div> */}
           </div>
           {products && products.length > 0 ? (
             <div
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-              // برای Masonry با CSS Columns:
-              // style={{ columnCount: 3, columnGap: '1rem' }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8"
             >
               {products.map((item, index) => (
-                // برای Masonry با CSS Columns:
-                // <div key={index} className="mb-4 inline-block w-full">
-                <ProductCard key={item._id} product={item} index={index} />
-                // </div>
+                <ProductCard key={item._id} product={item} index={index} wList={wList} setWlist={setWlist} />
               ))}
             </div>
           ) : (
-            <div className="col-span-full flex items-center justify-center py-24 text-2xl text-gray-500 dark:text-gray-400">
-              محصولی یافت نشد.
+            <div className="col-span-full flex items-center justify-center py-24 text-xl text-[var(--color-text-secondary)]">
+              محصولی در این دسته‌بندی یافت نشد.
             </div>
           )}
         </main>
@@ -149,23 +168,49 @@ const AllProduct = ({ products }) => {
 
 const PageComponent = () => {
   const [products, setProducts] = useState(null);
+  const [loading, setLoading] = useState(true); // Added loading state for this component
   const { catId } = useParams();
+  const { dispatch: homeDispatch } = useContext(HomeContext); // If HomeContext manages global loading
 
   useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      let responseData = await productByCategory(catId);
-      if (responseData && responseData.Products) {
-        setProducts(responseData.Products);
+    const fetchData = async () => {
+      setLoading(true);
+      // homeDispatch({ type: "loading", payload: true }); // Optional: use global loading
+      try {
+        let responseData = await productByCategory(catId);
+        if (responseData && responseData.Products) {
+          setProducts(responseData.Products);
+        }
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setLoading(false);
+        // homeDispatch({ type: "loading", payload: false });
       }
-    } catch (error) {
-      console.log(error);
-    }
-  };
+    };
+    fetchData();
+  }, [catId /*, homeDispatch*/]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <svg
+          className="w-16 h-16 animate-spin text-[var(--color-accent)]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          ></path>
+        </svg>
+      </div>
+    );
+  }
 
   return (
     <Fragment>
